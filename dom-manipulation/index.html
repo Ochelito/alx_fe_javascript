@@ -1,5 +1,5 @@
 <!--Building a Dynamic Content Generator with Advanced DOM Manipulation
-mandatory
+<!--mandatory
 Objective: Learn to create and manipulate dynamic content in a web application using advanced DOM manipulation techniques. This task focuses on generating interactive elements directly through JavaScript without relying on frameworks.
 
 Task Description:
@@ -36,7 +36,47 @@ Enhance the application to allow users to add their own quotes through a simple 
     <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
     <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
     <button onclick="addQuote()">Add Quote</button>
-  </div>-->
+  </div>
+
+  
+  Implementing Web Storage and JSON Handling
+mandatory
+Objective: Learn to use web storage mechanisms to store, retrieve, and manage data locally in the browser, and handle JSON data effectively within a web application.
+
+Task Description:
+Enhance the “Dynamic Quote Generator” from Task 1 by integrating local storage and session storage to persist quotes across browser sessions. Additionally, implement functionality to import and export quotes in JSON format, providing users with the ability to save and load their data.
+
+Step 1: Integrate Web Storage
+Using Local Storage:
+
+Modify the JavaScript code to save the quotes array to local storage every time a new quote is added. Ensure that the application loads existing quotes from local storage when initialized.
+Using Session Storage (Optional):
+
+Demonstrate the use of session storage by temporarily storing user preferences or session-specific data, such as the last viewed quote.
+Step 2: JSON Data Import and Export
+Implement JSON Export:
+
+Provide a button that allows users to export their quotes to a JSON file. Use Blob and URL.createObjectURL to create a download link.
+Implement JSON Import:
+
+Provide a file input to allow users to upload a JSON file containing quotes. Read the file and update the quotes array and local storage accordingly.
+  <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
+  function importFromJsonFile(event) {
+    const fileReader = new FileReader();
+    fileReader.onload = function(event) {
+      const importedQuotes = JSON.parse(event.target.result);
+      quotes.push(...importedQuotes);
+      saveQuotes();
+      alert('Quotes imported successfully!');
+    };
+    fileReader.readAsText(event.target.files[0]);
+  }
+Step 3: Testing and Validation
+Ensure Robust Functionality:
+Test all new functionalities thoroughly to ensure they work as expected. Verify that quotes are correctly persisted across sessions, and that import/export functions handle data correctly.
+  
+  
+  -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -47,8 +87,17 @@ Enhance the application to allow users to add their own quotes through a simple 
 </head>
 <body>
     <h1>Dynamic Quote Generator</h1>
-    <div id="quoteDisplay"></div>
+    <div id="quoteDisplay" style="margin: 1em 0; font-weight: bold;"></div>
     <button id="newQuote">Show New Quote</button>
+    <!-- Import/Export -->
+    <div style="margin-top: 1em;">
+      <button onclick="exportToJson()">Export Quotes (JSON)</button>
+      <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
+    </div>
+
+    <!-- Form created dynamically -->
+    <div id="formArea"></div>
+
     <script src="script.js"></script>
 </body>
 </html>
