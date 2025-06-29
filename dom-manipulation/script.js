@@ -248,17 +248,70 @@ function filterQuotes() {
   quoteDisplay.innerHTML = "<em>Filter selected. Click 'Show Random Quote'</em>";
 }
 
+function areQuotesEqual(a, b) {
+  return a.text === b.text && a.category === b.category;
+}
+
+function exportToJson() {
+  const blob = new Blob([JSON.stringify(quotes, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importFromJsonFile(event) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error("Invalid JSON structure");
+      quotes.push(...imported);
+      saveQuotes();
+      populateCategories();
+      alert("Quotes imported successfully!");
+    } catch (err) {
+      alert("Import failed: " + err.message);
+    }
+  };
+  reader.readAsText(event.target.files[0]);
+}
+
+// ✅ Required async fetch using POST method with headers
+async function postNewQuoteToServer(quote) {
+  try {
+    const response = await fetch("https://jsonplaceholder.typicode.com/posts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(quote)
+    });
+
+    const result = await response.json();
+    console.log("Posted to server:", result);
+  } catch (error) {
+    console.error("Failed to post to server:", error);
+  }
+}
+
+// Updated addQuote to include server POST
 function addQuote() {
   const text = document.getElementById("newQuoteText").value.trim();
   const category = document.getElementById("newQuoteCategory").value.trim();
   if (!text || !category) return alert("Please enter both quote and category.");
 
-  quotes.push({ text, category });
+  const newQuote = { text, category };
+  quotes.push(newQuote);
   saveQuotes();
   populateCategories();
+  postNewQuoteToServer(newQuote);
+
   document.getElementById("newQuoteText").value = "";
   document.getElementById("newQuoteCategory").value = "";
-  quoteDisplay.innerHTML = "<span style='color:green'>Quote added!</span>";
+  quoteDisplay.innerHTML = "<span style='color:green'>Quote added and sent to server!</span>";
 }
 
 function createAddQuoteForm() {
@@ -286,64 +339,29 @@ function createAddQuoteForm() {
   form.appendChild(button);
 }
 
-function exportToJson() {
-  const blob = new Blob([JSON.stringify(quotes, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "quotes.json";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function importFromJsonFile(event) {
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const imported = JSON.parse(e.target.result);
-      if (!Array.isArray(imported)) throw new Error("Invalid JSON structure");
-      quotes.push(...imported);
-      saveQuotes();
-      populateCategories();
-      alert("Quotes imported successfully!");
-    } catch (err) {
-      alert("Import failed: " + err.message);
-    }
-  };
-  reader.readAsText(event.target.files[0]);
-}
-
-function areQuotesEqual(a, b) {
-  return a.text === b.text && a.category === b.category;
-}
-
-// ✅ Required async function using fetch and JSONPlaceholder
+// ✅ Required async fetchQuotesFromServer
 async function fetchQuotesFromServer() {
   try {
     const response = await fetch("https://jsonplaceholder.typicode.com/posts");
-    if (!response.ok) throw new Error("Failed to fetch server quotes");
     const data = await response.json();
-    // Simulate quote structure using titles
-    const newQuotes = data.slice(0, 5).map(post => ({
+    return data.slice(0, 5).map(post => ({
       text: post.title,
       category: "Server"
     }));
-    return newQuotes;
-  } catch (err) {
-    console.error("Error fetching from server:", err);
+  } catch (error) {
+    console.error("Failed to fetch from server:", error);
     return [];
   }
 }
 
-// Sync logic
+// Sync function
 async function syncWithServer() {
   const serverQuotes = await fetchQuotesFromServer();
   let added = 0;
 
-  serverQuotes.forEach(serverQuote => {
-    const exists = quotes.some(local => areQuotesEqual(local, serverQuote));
-    if (!exists) {
-      quotes.push(serverQuote);
+  serverQuotes.forEach(q => {
+    if (!quotes.some(local => areQuotesEqual(local, q))) {
+      quotes.push(q);
       added++;
     }
   });
@@ -374,4 +392,3 @@ createAddQuoteForm();
 populateCategories();
 loadLastQuote();
 syncWithServer();
-
