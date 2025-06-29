@@ -206,7 +206,7 @@ let quotes = JSON.parse(localStorage.getItem("quotes")) || [
 
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
-const categoryFilter = document.getElementById("categoryFilter");
+const categoryFilter = document.getElementById("categoryFilter") || document.createElement("select");
 const formArea = document.getElementById("formArea") || document.createElement("div");
 const syncStatus = document.createElement("div");
 syncStatus.id = "syncStatus";
@@ -357,7 +357,7 @@ async function fetchQuotesFromServer() {
   }
 }
 
-// ✅ Sync with server and show status
+// ✅ Sync with server
 async function syncQuotes() {
   const serverQuotes = await fetchQuotesFromServer();
   let added = 0;
@@ -372,7 +372,7 @@ async function syncQuotes() {
   if (added > 0) {
     saveQuotes();
     populateCategories();
-    syncStatus.textContent = `${added} new quote(s) synced from server.`;
+    syncStatus.textContent = "Quotes synced with server!";
   } else {
     syncStatus.textContent = "No new quotes from server.";
   }
@@ -380,7 +380,7 @@ async function syncQuotes() {
   setTimeout(() => (syncStatus.textContent = ""), 4000);
 }
 
-// Load previous quote from session
+// Load last viewed quote
 function loadLastQuote() {
   const last = sessionStorage.getItem("lastQuote");
   if (last) {
@@ -389,13 +389,13 @@ function loadLastQuote() {
   }
 }
 
-// ✅ Periodic Sync using setInterval every 30 seconds
-setInterval(syncQuotes, 30000); // 30,000ms = 30 seconds
+// Periodic sync
+setInterval(syncQuotes, 30000);
 
-// Initialize
+// Initializ
 newQuoteBtn.addEventListener("click", showRandomQuote);
 categoryFilter.addEventListener("change", filterQuotes);
 createAddQuoteForm();
 populateCategories();
 loadLastQuote();
-syncQuotes(); // Initial syn
+syncQuotes();
