@@ -198,34 +198,31 @@ newQuoteBtn.addEventListener('click', showRandomQuote);
 createAddQuoteForm();
 loadLastViewedQuote();*/
 
-// Load quotes or use default
 let quotes = JSON.parse(localStorage.getItem("quotes")) || [
   { text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
   { text: "Creativity is intelligence having fun.", category: "Inspiration" },
   { text: "Do not watch the clock. Do what it does. Keep going.", category: "Perseverance" }
 ];
 
-// DOM references
 const quoteDisplay = document.getElementById('quoteDisplay');
 const newQuoteBtn = document.getElementById('newQuote');
 const categoryFilter = document.getElementById('categoryFilter');
+const syncStatus = document.getElementById('syncStatus');
 
-// Show filtered or random quote
+// Show a random quote based on filter
 function showRandomQuote() {
   const selectedCategory = categoryFilter.value;
-  let filtered = selectedCategory === "all"
+  const filtered = selectedCategory === "all"
     ? quotes
     : quotes.filter(q => q.category === selectedCategory);
 
   if (filtered.length === 0) {
-    quoteDisplay.innerHTML = "<em>No quotes available in this category.</em>";
+    quoteDisplay.innerHTML = "<em>No quotes in this category.</em>";
     return;
   }
 
-  const randomIndex = Math.floor(Math.random() * filtered.length);
-  const quote = filtered[randomIndex];
+  const quote = filtered[Math.floor(Math.random() * filtered.length)];
   quoteDisplay.innerHTML = `"${quote.text}" <br><small>— ${quote.category}</small>`;
-
   sessionStorage.setItem("lastQuote", JSON.stringify(quote));
 }
 
@@ -234,48 +231,39 @@ function saveQuotes() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
 }
 
-// Extract unique categories and populate filter
+// Populate category dropdown
 function populateCategories() {
   const categories = [...new Set(quotes.map(q => q.category))];
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
-  categories.forEach(category => {
+  categories.forEach(cat => {
     const option = document.createElement("option");
-    option.value = category;
-    option.textContent = category;
+    option.value = cat;
+    option.textContent = cat;
     categoryFilter.appendChild(option);
   });
 
-  // Restore last selected filter
-  const savedFilter = localStorage.getItem("selectedCategory");
-  if (savedFilter) {
-    categoryFilter.value = savedFilter;
-  }
+  const savedCategory = localStorage.getItem("selectedCategory");
+  if (savedCategory) categoryFilter.value = savedCategory;
 }
 
-// Filter quotes on dropdown change
+// Filter UI interaction
 function filterQuotes() {
   localStorage.setItem("selectedCategory", categoryFilter.value);
-  quoteDisplay.innerHTML = "<em>Filter applied. Click 'Show Random Quote' to view.</em>";
+  quoteDisplay.innerHTML = "<em>Filter selected. Click 'Show Random Quote'</em>";
 }
 
-// Add new quote and update categories
+// Add a new quote
 function addQuote() {
   const text = document.getElementById('newQuoteText').value.trim();
   const category = document.getElementById('newQuoteCategory').value.trim();
-
-  if (!text || !category) {
-    alert("Please enter both quote and category.");
-    return;
-  }
+  if (!text || !category) return alert("Please enter both quote and category.");
 
   quotes.push({ text, category });
   saveQuotes();
   populateCategories();
-
   document.getElementById('newQuoteText').value = "";
   document.getElementById('newQuoteCategory').value = "";
-
-  quoteDisplay.innerHTML = `<span style="color: green;">Quote added!</span>`;
+  quoteDisplay.innerHTML = "<span style='color:green'>Quote added!</span>";
 }
 
 // Create quote form dynamically
@@ -315,15 +303,13 @@ function exportToJson() {
   URL.revokeObjectURL(url);
 }
 
-// Import JSON file
+// Import quotes from JSON
 function importFromJsonFile(event) {
-  const fileReader = new FileReader();
-
-  fileReader.onload = function(e) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
     try {
       const imported = JSON.parse(e.target.result);
-      if (!Array.isArray(imported)) throw new Error("Invalid structure");
-
+      if (!Array.isArray(imported)) throw new Error("Invalid JSON structure.");
       quotes.push(...imported);
       saveQuotes();
       populateCategories();
@@ -332,11 +318,48 @@ function importFromJsonFile(event) {
       alert("Import failed: " + err.message);
     }
   };
-
-  fileReader.readAsText(event.target.files[0]);
+  reader.readAsText(event.target.files[0]);
 }
 
-// Load last quote if available
+// Compare quotes for conflict resolution
+function areQuotesEqual(q1, q2) {
+  return q1.text === q2.text && q1.category === q2.category;
+}
+
+// Sync with serverQuotes.json and merge
+function syncWithServer() {
+  fetch("serverQuotes.json")
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to fetch server data");
+      return res.json();
+    })
+    .then(serverQuotes => {
+      let added = 0;
+      serverQuotes.forEach(serverQuote => {
+        const exists = quotes.some(localQuote => areQuotesEqual(localQuote, serverQuote));
+        if (!exists) {
+          quotes.push(serverQuote);
+          added++;
+        }
+      });
+
+      if (added > 0) {
+        saveQuotes();
+        populateCategories();
+        syncStatus.textContent = `${added} new quote(s) synced from server.`;
+      } else {
+        syncStatus.textContent = "No new quotes from server.";
+      }
+
+      setTimeout(() => syncStatus.textContent = "", 5000);
+    })
+    .catch(err => {
+      syncStatus.textContent = `Sync failed: ${err.message}`;
+      setTimeout(() => syncStatus.textContent = "", 5000);
+    });
+}
+
+// Load last quote on refresh
 function loadLastQuote() {
   const last = sessionStorage.getItem("lastQuote");
   if (last) {
@@ -345,8 +368,9 @@ function loadLastQuote() {
   }
 }
 
-// Initialize
-newQuoteBtn.addEventListener('click', showRandomQuote);
+// Setup event listeners and initialize
+newQuoteBtn.addEventListener("click", showRandomQuote);
 createAddQuoteForm();
 populateCategories();
 loadLastQuote();
+
